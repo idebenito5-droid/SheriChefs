@@ -62,6 +62,38 @@
   .layout{display:grid;grid-template-columns:270px 1fr;gap:26px;align-items:start;}
   @media (max-width:860px){ .layout{grid-template-columns:1fr;} }
 
+  /* ---------- Compact toolbar bar ---------- */
+  .toolbar-bar{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    background:var(--paper);border:1px solid rgba(58,44,34,0.06);border-radius:var(--radius-lg);
+    padding:12px 16px;box-shadow:var(--shadow);margin-bottom:16px;
+  }
+  .tb-search{flex:0 1 220px;min-width:160px;}
+  .tb-search input[type="search"]{padding:9px 12px;font-size:13px;}
+  .filter-group{display:flex;align-items:center;gap:8px;flex:1 1 auto;justify-content:center;flex-wrap:wrap;}
+  .capsule-select.sm{padding:6px 11px;font-size:11.5px;}
+  .reset-chip{
+    flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--rust);color:var(--rust);
+    background:transparent;font-size:12px;line-height:1;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;transition:all .15s;
+  }
+  .reset-chip:hover{background:var(--rust);color:#fff;}
+  .nevera-btn{flex:0 0 auto;white-space:nowrap;}
+  .pantry-panel{
+    background:var(--paper);border:1px solid rgba(58,44,34,0.06);border-radius:var(--radius-lg);
+    padding:16px 18px;box-shadow:var(--shadow);margin-bottom:16px;
+  }
+  .pantry-panel h3{margin:0 0 10px;font-size:13px;color:var(--rust-dark);text-transform:uppercase;letter-spacing:0.08em;font-weight:700;}
+  .pantry-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px;}
+  .pantry-actions .pantry-btn{width:auto;margin-top:0;padding:10px 20px;}
+  .pantry-actions .pantry-clear{margin-top:0;}
+  @media (max-width:700px){
+    .toolbar-bar{flex-direction:column;align-items:stretch;}
+    .tb-search{flex:1 1 auto;min-width:0;}
+    .filter-group{justify-content:flex-start;}
+    .nevera-btn{width:100%;text-align:center;}
+  }
+
   /* ---------- Sidebar / filters ---------- */
   .panel{
     background:var(--paper);
@@ -229,70 +261,61 @@
 </header>
 
 <div class="wrap">
-  <div class="layout">
 
-    <!-- SIDEBAR -->
-    <div>
-      <div class="panel search-box">
-        <h3>Buscar</h3>
-        <div class="search-wrap">
-          <input type="search" id="searchInput" placeholder="Nombre o ingrediente..." autocomplete="off">
-          <div class="search-dropdown" id="searchDropdown"></div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h3>Filtros</h3>
-        <div class="capsule-row">
-          <select id="calFilter" class="capsule-select">
-            <option value="9999">Calorías</option>
-            <option value="200">Menos de 200 kcal</option>
-            <option value="300">Menos de 300 kcal</option>
-            <option value="400">Menos de 400 kcal</option>
-            <option value="500">Menos de 500 kcal</option>
-          </select>
-          <select id="timeFilter" class="capsule-select">
-            <option value="9999">Tiempo</option>
-            <option value="20">Menos de 20 min</option>
-            <option value="30">Menos de 30 min</option>
-            <option value="45">Menos de 45 min</option>
-            <option value="60">Menos de 1 h</option>
-            <option value="120">Menos de 2 h</option>
-          </select>
-          <select id="mealTypeFilter" class="capsule-select">
-            <option value="">Tipo de comida</option>
-            <option value="starters">Entrantes y picoteo</option>
-            <option value="main">Platos principales</option>
-            <option value="dessert">Postres y dulces</option>
-          </select>
-          <div class="capsule-toggle" id="healthyCapsule">🌱 Healthy</div>
-        </div>
-        <button class="reset-btn" id="resetBtn">Borrar filtros</button>
-      </div>
-
-      <div class="panel">
-        <h3>¿Qué tengo en la nevera?</h3>
-        <textarea id="pantryInput" placeholder="Escribe los ingredientes que tienes, separados por comas: p.ej. huevos, patata, cebolla, queso..."></textarea>
-        <button class="pantry-btn" id="pantryBtn">Buscar recetas posibles</button>
-        <div class="pantry-hint">Ordena las recetas según cuántos ingredientes coincidan con lo que tienes.</div>
-        <button class="pantry-clear" id="pantryClear">Quitar filtro de despensa</button>
-      </div>
+  <div class="toolbar-bar">
+    <div class="search-wrap tb-search">
+      <input type="search" id="searchInput" placeholder="Buscar..." autocomplete="off">
+      <div class="search-dropdown" id="searchDropdown"></div>
     </div>
 
-    <!-- MAIN -->
-    <div>
-      <div class="toolbar">
-        <div class="result-count" id="resultCount"></div>
-      </div>
-
-      <div class="grid" id="grid"></div>
-      <div class="empty-state" id="emptyState" style="display:none;">
-        <div class="big">🍽️</div>
-        <div>No hay recetas que coincidan con estos filtros.</div>
-      </div>
+    <div class="filter-group">
+      <select id="calFilter" class="capsule-select sm">
+        <option value="9999">Calorías</option>
+        <option value="200">Menos de 200 kcal</option>
+        <option value="300">Menos de 300 kcal</option>
+        <option value="400">Menos de 400 kcal</option>
+        <option value="500">Menos de 500 kcal</option>
+      </select>
+      <select id="timeFilter" class="capsule-select sm">
+        <option value="9999">Tiempo</option>
+        <option value="20">Menos de 20 min</option>
+        <option value="30">Menos de 30 min</option>
+        <option value="45">Menos de 45 min</option>
+        <option value="60">Menos de 1 h</option>
+        <option value="120">Menos de 2 h</option>
+      </select>
+      <select id="mealTypeFilter" class="capsule-select sm">
+        <option value="">Tipo de comida</option>
+        <option value="starters">Entrantes y picoteo</option>
+        <option value="main">Platos principales</option>
+        <option value="dessert">Postres y dulces</option>
+      </select>
+      <button class="reset-chip" id="resetBtn" title="Borrar filtros">✕</button>
     </div>
 
+    <button class="capsule-toggle nevera-btn" id="pantryToggle">🥕 Nevera</button>
   </div>
+
+  <div class="pantry-panel" id="pantryPanel" style="display:none;">
+    <h3>¿Qué tengo en la nevera?</h3>
+    <textarea id="pantryInput" placeholder="Escribe los ingredientes que tienes, separados por comas: p.ej. huevos, patata, cebolla, queso..."></textarea>
+    <div class="pantry-actions">
+      <button class="pantry-btn" id="pantryBtn">Buscar recetas posibles</button>
+      <button class="pantry-clear" id="pantryClear">Quitar filtro de despensa</button>
+    </div>
+    <div class="pantry-hint">Ordena las recetas según cuántos ingredientes coincidan con lo que tienes.</div>
+  </div>
+
+  <div class="toolbar">
+    <div class="result-count" id="resultCount"></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <div class="big">🍽️</div>
+    <div>No hay recetas que coincidan con estos filtros.</div>
+  </div>
+
 </div>
 
 <footer>SheriChefs — recetario de Los Sherichefs, basado en el libro de recetas oficial de Moulinex ClickChef.</footer>
@@ -311,7 +334,6 @@ const state = {
   mealType: '',
   maxCal: 9999,
   maxTime: 9999,
-  healthy: false,
   pantryActive: false,
   pantryList: []
 };
@@ -367,7 +389,6 @@ function getFiltered(){
   if(state.mealType && MEAL_TYPE_CATS[state.mealType]) list = list.filter(r=>MEAL_TYPE_CATS[state.mealType].includes(r.cat));
   if(state.maxCal < 9999) list = list.filter(r=>r.calories <= state.maxCal);
   if(state.maxTime < 9999) list = list.filter(r=>r.time <= state.maxTime);
-  if(state.healthy) list = list.filter(r=>r.healthy);
 
   if(state.pantryActive && state.pantryList.length){
     list = list.map(r=>({r, score: pantryMatchScore(r, state.pantryList)}))
@@ -515,21 +536,22 @@ document.getElementById('searchInput').addEventListener('input', e=>{ state.sear
 document.getElementById('calFilter').addEventListener('change', e=>{ state.maxCal=parseInt(e.target.value); render(); });
 document.getElementById('timeFilter').addEventListener('change', e=>{ state.maxTime=parseInt(e.target.value); render(); });
 document.getElementById('mealTypeFilter').addEventListener('change', e=>{ state.mealType=e.target.value; render(); });
-document.getElementById('healthyCapsule').addEventListener('click', ()=>{
-  state.healthy = !state.healthy;
-  document.getElementById('healthyCapsule').classList.toggle('active', state.healthy);
-  render();
-});
 
 document.getElementById('resetBtn').addEventListener('click', ()=>{
-  state.search=''; state.mealType=''; state.maxCal=9999; state.maxTime=9999; state.healthy=false;
+  state.search=''; state.mealType=''; state.maxCal=9999; state.maxTime=9999;
   document.getElementById('searchInput').value='';
   document.getElementById('calFilter').value='9999';
   document.getElementById('timeFilter').value='9999';
   document.getElementById('mealTypeFilter').value='';
-  document.getElementById('healthyCapsule').classList.remove('active');
   document.getElementById('searchDropdown').classList.remove('show');
   render();
+});
+
+document.getElementById('pantryToggle').addEventListener('click', ()=>{
+  const panel = document.getElementById('pantryPanel');
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  document.getElementById('pantryToggle').classList.toggle('active', !open);
 });
 
 document.getElementById('pantryBtn').addEventListener('click', ()=>{

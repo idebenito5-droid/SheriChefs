@@ -372,6 +372,29 @@
     font-weight:700;margin:22px 0 8px;}
   .cook-sub:first-child{margin-top:0;}
 
+  /* checklist de micro-acciones */
+  .mlist{list-style:none;margin:0;padding:0;}
+  .mitem{
+    display:flex;align-items:flex-start;gap:13px;padding:12px 14px;margin-bottom:4px;
+    border-radius:var(--radius-md);cursor:pointer;font-size:15.5px;line-height:1.45;
+    color:var(--ink-soft);border:1px solid transparent;transition:all .15s;
+  }
+  .mbox{
+    flex:0 0 auto;width:23px;height:23px;border-radius:50%;border:2px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:12px;margin-top:1px;
+    color:#fff;transition:all .15s;
+  }
+  .mitem.done .mbox{background:var(--olive);border-color:var(--olive);}
+  .mitem.done .mtext{text-decoration:line-through;opacity:0.6;}
+  .mitem.todo{opacity:0.45;}
+  .mitem.current{
+    background:var(--paper);border-color:var(--rust);box-shadow:var(--shadow);
+    color:var(--ink);font-size:20px;font-weight:600;padding:17px 16px;
+  }
+  .mitem.current .mbox{border-color:var(--rust);width:25px;height:25px;}
+  .mitem:not(.current):hover{background:var(--cream-2);}
+  @media (max-width:600px){ .mitem.current{font-size:18px;} .mitem{font-size:14.5px;} }
+
   .cook-timer{margin-top:24px;}
   .timer-btn{
     display:inline-flex;align-items:center;gap:9px;background:var(--olive);color:#fff;border:none;
@@ -448,7 +471,7 @@
 
 </div>
 
-<footer>SheriChefs — recetario de Los Sherichefs, basado en el libro de recetas oficial de Moulinex ClickChef.<br><span style="opacity:.6;font-size:11px;">versión 3 · cocina guiada</span></footer>
+<footer>SheriChefs — recetario de Los Sherichefs, basado en el libro de recetas oficial de Moulinex ClickChef.<br><span style="opacity:.6;font-size:11px;">versión 4 · pasos con checklist</span></footer>
 
 <!-- DRAWER -->
 <div class="scrim" id="scrim"></div>
@@ -739,27 +762,89 @@ function parseStepSettings(text){
   return out;
 }
 
-// Trocea pasos muy largos en sub-pasos por frases
-function splitLongStep(text, limit){
-  limit = limit || 300;
-  if(text.length <= limit) return [text];
-  const sentences = text.match(/[^.!?]+[.!?]*\s*/g) || [text];
-  const parts = [];
-  let buf = '';
-  sentences.forEach(s=>{
-    if(buf && (buf + s).length > limit){ parts.push(buf.trim()); buf = s; }
-    else buf += s;
+/* --- Trocea cada paso del libro en micro-acciones --- */
+const ADD_VERBS = 'poner|añadir|agregar|verter|incorporar|colocar|echar';
+const ACT_VERBS = ADD_VERBS + '|mezclar|programar|iniciar|triturar|picar|batir|amasar|montar|calentar|cocer|cocinar|sacar|retirar|envolver|dejar|formar|extender|cortar|pelar|lavar|servir|hornear|precalentar|escurrir|colar|reservar|tapar|cubrir|decorar|freír|freir|sofreír|sofreir|rehogar|remover|disolver|fundir|rellenar|untar|espolvorear|salpimentar|salar|conectar|seleccionar|repetir|desmoldar|enfriar|reposar|trocear|rallar|hervir|dorar|gratinar|marcar|bañar|regar|pinchar|abrir|cerrar|quitar|limpiar|secar|pasar|volcar|distribuir|repartir|aplastar|majar|emulsionar|ligar|espesar|rectificar';
+
+const RE_CLAUSE = new RegExp('\\s+y\\s+(?=(?:' + ACT_VERBS + ')\\b)', 'i');
+const RE_CONT   = new RegExp('[,;]?\\s*(?:y\\s+)?a\\s+continuaci[oó]n,?\\s+(?=(?:' + ACT_VERBS + ')\\b)', 'i');
+const RE_STARTS_ADD = new RegExp('^\\s*(?:' + ADD_VERBS + ')\\b', 'i');
+const RE_STARTS_ACT = new RegExp('^\\s*(?:' + ACT_VERBS + ')\\b', 'i');
+const NOT_VERBS = ['azúcar','azucar','almíbar','almibar','néctar','nectar','caviar','manjar'];
+const RE_INFINITIVE = /^\s*([a-záéíóúñü]{4,})(?:se|lo|la|le|los|las|les|me|te|nos)?\b/i;
+
+function mCap(s){ s = s.trim().replace(/^[,;]\s*/,''); return s ? s[0].toUpperCase() + s.slice(1) : s; }
+
+function mSentences(t){
+  return t.replace(/([.!?])\s+(?=[A-ZÁÉÍÓÚÑÜ¡¿])/g, '$1@@SC@@')
+          .split('@@SC@@').map(s=>s.trim()).filter(Boolean);
+}
+
+function mClauses(sentence){
+  let parts = [sentence];
+  [RE_CONT, RE_CLAUSE].forEach(re=>{
+    const out = [];
+    parts.forEach(p=>{
+      let rest = p, guard = 0;
+      while(guard++ < 10){
+        const m = rest.match(re);
+        if(!m) break;
+        out.push(rest.slice(0, m.index));
+        rest = rest.slice(m.index + m[0].length);
+      }
+      out.push(rest);
+    });
+    parts = out.map(x=>x.trim()).filter(Boolean);
   });
-  if(buf.trim()) parts.push(buf.trim());
-  return parts.filter(Boolean);
+  return parts;
+}
+
+function mStartsWithVerb(t){
+  if(RE_STARTS_ACT.test(t)) return true;
+  const m = t.match(RE_INFINITIVE);
+  if(!m) return false;
+  const w = m[1].toLowerCase();
+  if(NOT_VERBS.indexOf(w) !== -1) return false;
+  return /(ar|er|ir)$/.test(w);
+}
+
+function mExpandAdds(clause){
+  if(!RE_STARTS_ADD.test(clause)) return [clause];
+  const raw = clause.split(/,(?!\s*\d)/).map(s=>s.trim().replace(/,$/,'')).filter(Boolean);
+  if(raw.length < 2) return [clause];
+  const tail = raw.slice(1);
+  if(tail.some(t => t.length > 55)) return [clause];
+  const out = [raw[0]];
+  tail.forEach(t=>{ out.push(mStartsWithVerb(t) ? t : 'Añadir ' + t); });
+  return out;
+}
+
+function splitMicroActions(step){
+  let micros = [];
+  mSentences(step).forEach(sen=>{
+    mClauses(sen).forEach(cl=>{
+      mExpandAdds(cl).forEach(m=> micros.push(mCap(m)));
+    });
+  });
+  micros = micros.map(m=>m.replace(/\s+/g,' ').trim()).filter(m=>m.length > 2);
+  if(!micros.length || micros.length > 14 || micros.some(m=>m.length < 6)){
+    const fb = mSentences(step).map(mCap).filter(s=>s.length>2);
+    return fb.length ? fb : [step];
+  }
+  return micros;
 }
 
 function buildCookScreens(r){
-  const screens = [];
-  screens.push({type:'prep'});
-  r.steps.forEach(raw=>{
-    splitLongStep(raw).forEach(part=>{
-      screens.push({type:'step', text:part, settings:parseStepSettings(part)});
+  const screens = [{type:'prep'}];
+  const total = r.steps.length;
+  r.steps.forEach((raw, gi)=>{
+    const group = splitMicroActions(raw);
+    const groupStart = screens.length;
+    group.forEach((part, mi)=>{
+      screens.push({
+        type:'step', text:part, settings:parseStepSettings(part),
+        group:group, inGroup:mi, groupIdx:gi, groupStart:groupStart, totalGroups:total
+      });
     });
   });
   screens.push({type:'done'});
@@ -858,10 +943,7 @@ function renderCook(){
   let label = '';
   if(sc.type === 'prep') label = 'Antes de empezar';
   else if(sc.type === 'done') label = 'Terminado';
-  else {
-    const n = cook.screens.slice(0, cook.i+1).filter(x=>x.type==='step').length;
-    label = 'Paso ' + n + ' de ' + stepScreens.length;
-  }
+  else label = 'Paso ' + (sc.groupIdx+1) + ' de ' + sc.totalGroups;
   document.getElementById('cookStepNo').textContent = label;
 
   let html = '<div class="cook-inner">';
@@ -891,7 +973,12 @@ function renderCook(){
   }
   else {
     html += settingsHTML(sc.settings);
-    html += '<p class="cook-text">'+esc(sc.text)+'</p>';
+    html += '<ul class="mlist">' + sc.group.map((m, idx)=>{
+      const cls = idx < sc.inGroup ? 'done' : (idx === sc.inGroup ? 'current' : 'todo');
+      const mark = idx < sc.inGroup ? '✓' : '';
+      return '<li class="mitem '+cls+'" data-jump="'+(sc.groupStart+idx)+'">'
+           + '<span class="mbox">'+mark+'</span><span class="mtext">'+esc(m)+'</span></li>';
+    }).join('') + '</ul>';
     html += '<div class="cook-timer" id="cookTimerBox"></div>';
     const isLastStep = cook.i === cook.screens.length - 2;
     nextBtn.textContent = isLastStep ? 'Finalizar' : 'Siguiente';
@@ -902,6 +989,13 @@ function renderCook(){
   body.scrollTop = 0;
 
   prevBtn.disabled = cook.i === 0;
+
+  body.querySelectorAll('[data-jump]').forEach(li=>{
+    li.addEventListener('click', ()=>{
+      const t = parseInt(li.getAttribute('data-jump'));
+      if(t !== cook.i){ stopTimer(); cook.i = t; renderCook(); }
+    });
+  });
 
   body.querySelectorAll('[data-ing]').forEach(li=>{
     li.addEventListener('click', ()=>{
@@ -1099,8 +1193,8 @@ render();
 if('serviceWorker' in navigator){
   try{
     const swCode = "self.addEventListener('install',e=>self.skipWaiting());"
-      + "self.addEventListener('activate',e=>{e.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k!=='sherichefs-v3').map(k=>caches.delete(k)));await self.clients.claim();})());});"
-      + "self.addEventListener('fetch',e=>{e.respondWith((async()=>{const cache=await caches.open('sherichefs-v3');const isDoc=e.request.mode==='navigate'||e.request.destination==='document';try{const res=await fetch(e.request,isDoc?{cache:'reload'}:undefined);if(res&&res.ok&&e.request.method==='GET')cache.put(e.request,res.clone());return res;}catch(err){const cached=await cache.match(e.request);if(cached)return cached;throw err;}})());});";
+      + "self.addEventListener('activate',e=>{e.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k!=='sherichefs-v4').map(k=>caches.delete(k)));await self.clients.claim();})());});"
+      + "self.addEventListener('fetch',e=>{e.respondWith((async()=>{const cache=await caches.open('sherichefs-v4');const isDoc=e.request.mode==='navigate'||e.request.destination==='document';try{const res=await fetch(e.request,isDoc?{cache:'reload'}:undefined);if(res&&res.ok&&e.request.method==='GET')cache.put(e.request,res.clone());return res;}catch(err){const cached=await cache.match(e.request);if(cached)return cached;throw err;}})());});";
     const blob = new Blob([swCode], {type: 'text/javascript'});
     const swUrl = URL.createObjectURL(blob);
     window.addEventListener('load', ()=>{
